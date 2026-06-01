@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sohbet Odası</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        /* --- Global Styles & Theme --- */
+        :root {
+            --background-color: #1a1a1d; /* Dark background */
+            --primary-color: #00bcd4; /* Neon Cyan */
+            --secondary-color: #bb86fc; /* Neon Purple */
+            --accent-color: #ff0266; /* Neon Pink */
+            --text-color: #e0e0e0; /* Light gray text */
+            --input-bg: #2c2c2e;
+            --error-color: #ff4d4d;
+            --info-color: #64b5f6;
+            --border-color: #4a4a4a;
+            --hover-effect-duration: 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden; /* Prevent horizontal scrollbars */
+            background-image: radial-gradient(circle, rgba(40, 40, 40, 0.5) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .container {
+            background-color: rgba(26, 26, 29, 0.8);
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 15px var(--primary-color) inset, 0 0 5px var(--accent-color) inset;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+        }
+
+        h1, h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-shadow: 0 0 8px var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="file"] {
+            width: calc(100% - 20px);
+            padding: 12px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 16px;
+            transition: border-color var(--hover-effect-duration) ease, box-shadow var(--hover-effect-duration) ease;
+            outline: none;
+            box-sizing: border-box;
+        }
+        
+        /* Style for file input (to make it look better) */
+        input[type="file"] {
+            padding: 10px;
+            cursor: pointer;
+        }
+        input[type="file"]::file-selector-button {
+             padding: 8px 12px;
+             background-color: var(--primary-color);
+             color: var(--background-color);
+             border: none;
+             border-radius: 4px;
+             margin-right: 10px;
+             cursor: pointer;
+             font-weight: bold;
+             transition: background-color var(--hover-effect-duration) ease;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color var(--hover-effect-duration) ease, transform 0.2s ease, box-shadow var(--hover-effect-duration) ease;
+            width: 100%;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0, 188, 212, 0.4);
+            margin-bottom: 10px; /* Add space below buttons */
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+            box-shadow: 0 6px 15px rgba(187, 134, 252, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: var(--error-color);
+            font-size: 14px;
+            margin-top: 10px;
+            margin-bottom: 10px; /* Space below error message */
+            text-align: center;
+            opacity: 0;
+            transition: opacity var(--hover-effect-duration) ease;
+            height: 1.2em; /* Reserve space for error message */
+        }
+
+        .error-message.visible {
+            opacity: 1;
+        }
+
+        #chat-container {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            height: 70vh;
+            max-height: 70vh;
+            overflow: hidden;
+            position: relative;
+            width: 100%; /* Make chat container take full width */
+        }
+
+        #room-info {
+            background-color: var(--input-bg);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 5px solid var(--primary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        #room-info span {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        #messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-color) transparent;
+        }
+
+        #messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #messages::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 6px;
+            border: 3px solid transparent;
+            background-clip: content-box;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column; /* Stack sender, content, time */
+            align-items: flex-start; /* Default alignment to the left */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 75%; /* Limit message width */
+            position: relative; /* For delete button positioning */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .message.info {
+            align-items: center;
+            background-color: rgba(100, 181, 246, 0.2); /* Light blue for info */
+            border-left: 4px solid var(--info-color);
+            text-align: center;
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            flex-direction: row; /* Keep info messages on one line if possible */
+        }
+
+        .message.user {
+            background-color: rgba(187, 134, 252, 0.2); /* Purple-ish for user messages */
+            border-left: 4px solid var(--secondary-color);
+            align-items: flex-start; /* User messages align left */
+        }
+
+        .message.my-message { /* Style for messages sent by the current user */
+            background-color: rgba(255, 2, 102, 0.2); /* Pink for own messages */
+            border-left: 4px solid var(--accent-color);
+            align-items: flex-end; /* Own messages align right */
+            margin-left: auto; /* Push to the right */
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            width: 100%;
+        }
+
+        .message-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background-color: var(--border-color); /* Placeholder color */
+            object-fit: cover; /* Ensure image covers the area */
+        }
+        
+        .message-sender {
+            font-weight: bold;
+            color: var(--primary-color);
+            font-size: 0.9em;
+            text-shadow: 0 0 5px var(--primary-color);
+            margin-right: 10px; /* Space between sender name and time */
+        }
+
+        .message-content {
+            font-size: 1em;
+            line-height: 1.4;
+            margin-top: 5px;
+        }
+        
+        .message-time {
+            font-size: 0.7em;
+            color: var(--border-color);
+            margin-left: auto; /* Push time to the right */
+            white-space: nowrap; /* Prevent time from wrapping */
+        }
+
+        .delete-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8em;
+            padding: 3px 6px;
+            transition: background-color var(--hover-effect-duration) ease;
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.3s ease;
+        }
+        
+        .message:hover .delete-button {
+            opacity: 1; /* Show on hover */
+        }
+        .message.my-message:hover .delete-button {
+             opacity: 1; /* Always show for own messages */
+        }
+
+        .delete-button:hover {
+            background: red;
+        }
+
+        #input-area {
+            display: flex;
+            align-items: center;
+            background-color: var(--input-bg);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        #message-input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background-color: rgba(0,0,0,0.2);
+            color: var(--text-color);
+            font-size: 1em;
+            outline: none;
+            margin-right: 10px;
+        }
+
+        #send-button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color var(--hover-effect-duration) ease, transform 0.2s ease;
+            font-size: 1.2em;
+            width: auto;
+            box-shadow: 0 4px 10px rgba(255, 2, 102, 0.4);
+        }
+
+        #send-button:hover {
+            background-color: var(--secondary-color);
+            box-shadow: 0 6px 15px rgba(187, 134, 252, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        #send-button:active {
+            transform: translateY(0);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+        
+        .neon-button {
+            position: relative;
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 1em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            overflow: hidden;
+            transition: all 0.5s ease;
+            box-shadow: 0 0 5px var(--primary-color), 0 0 10px var(--primary-color);
+            margin-bottom: 10px; /* Space below buttons */
+        }
+        
+        .neon-button::before, .neon-button::after {
+            content: '';
+            position: absolute;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+        }
+        .neon-button::before {
+            top: 0; left: -100%; width: 100%; height: 2px;
+            animation: animateLine 2s linear infinite;
+        }
+        .neon-button::after {
+            top: -100%; left: 0; width: 2px; height: 100%;
+            animation: animateLine2 2s linear infinite;
+            animation-delay: 1s;
+        }
+
+        @keyframes animateLine { 0% { transform: translateX(0%); } 100% { transform: translateX(100%); } }
+        @keyframes animateLine2 { 0% { transform: translateY(0%); } 100% { transform: translateY(100%); } }
+        
+        .neon-button:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color), 0 0 40px var(--primary-color);
+            text-shadow: 0 0 5px #fff;
+        }
+
+        .switch-button {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 0.9em;
+            text-decoration: underline;
+            margin-top: 15px;
+            transition: color var(--hover-effect-duration) ease;
+            width: auto; /* Override button width */
+            margin-bottom: 0; /* Remove margin-bottom */
+        }
+        
+        .switch-button:hover {
+            color: var(--secondary-color);
+        }
+        
+        /* Profile Section Styles */
+        #profile-section {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        #profile-avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-bottom: 20px;
+            object-fit: cover;
+            background-color: var(--input-bg);
+            border: 3px solid var(--primary-color);
+            box-shadow: 0 0 15px var(--primary-color);
+        }
+        
+        #profile-avatar-preview.default {
+            content: url('/images/default-avatar.png'); /* Provide a default avatar image */
+            background-color: var(--border-color);
+        }
+
+        .profile-actions {
+            display: flex;
+            gap: 15px; /* Space between buttons */
+            margin-top: 20px;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center;
+        }
+
+        .profile-actions button {
+            width: auto; /* Override full width */
+            padding: 10px 25px;
+        }
+
+        /* Form Section Transitions */
+        .form-section {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Specific styling for chat messages */
+        .message-content img { /* Style for images sent in chat */
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 5px;
+            margin-top: 5px;
+            cursor: pointer; /* Indicate it's clickable */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Form -->
+        <div id="login-form" class="form-section">
+            <h2>Giriş Yap</h2>
+            <div class="form-group">
+                <label for="login-username">Kullanıcı Adı:</label>
+                <input type="text" id="login-username" placeholder="Kullanıcı Adı">
+            </div>
+            <div class="form-group">
+                <label for="login-password">Şifre:</label>
+                <input type="password" id="login-password" placeholder="Şifre">
+            </div>
+            <div id="login-error" class="error-message"></div>
+            <button id="login-button">Giriş Yap</button>
+            <button class="switch-button" onclick="showRegisterForm()">Hesabın yok mu? Kayıt Ol</button>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="register-form" class="form-section hidden">
+            <h2>Kayıt Ol</h2>
+            <div class="form-group">
+                <label for="register-username">Kullanıcı Adı:</label>
+                <input type="text" id="register-username" placeholder="Kullanıcı Adı">
+            </div>
+            <div class="form-group">
+                <label for="register-password">Şifre:</label>
+                <input type="password" id="register-password" placeholder="Şifre">
+            </div>
+            <div id="register-error" class="error-message"></div>
+            <button id="register-button">Kayıt Ol</button>
+            <button class="switch-button" onclick="showLoginForm()">Zaten hesabın var mı? Giriş Yap</button>
+        </div>
+
+        <!-- Room Selection Form -->
+        <div id="room-selection-form" class="form-section hidden">
+            <h2>Odaya Katıl</h2>
+            <div id="profile-preview-container" style="text-align: center; margin-bottom: 20px;">
+                 <img id="current-user-avatar" src="" alt="Profil Resmi" class="hidden" style="width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--primary-color); box-shadow: 0 0 10px var(--primary-color);">
+                 <p id="current-username-display" style="margin-top: 10px; font-size: 1.1em; font-weight: bold; color: var(--primary-color);"></p>
+            </div>
+            <div class="form-group">
+                <label for="room-code">Oda Kodu:</label>
+                <input type="text" id="room-code" placeholder="örn: tayfa123">
+            </div>
+            <div id="room-selection-error" class="error-message"></div>
+            <button id="join-room-button">Odaya Gir</button>
+            <button class="switch-button" onclick="showProfileSection()">Profili Düzenle</button>
+        </div>
+
+        <!-- Profile Section -->
+        <div id="profile-section" class="form-section hidden">
+            <h2>Profil Ayarları</h2>
+            <img id="profile-avatar-preview" src="" alt="Profil Resmi Önizlemesi" class="default">
+            <p id="profile-username-display" style="font-size: 1.2em; font-weight: bold; margin-bottom: 15px;"></p>
+            
+            <div class="form-group">
+                <label for="profile-picture-input">Profil Resmi Yükle:</label>
+                <input type="file" id="profile-picture-input" accept="image/*">
+            </div>
+            <div id="upload-status" style="margin-top: 10px; font-size: 0.9em; color: var(--info-color);"></div>
+
+            <div class="profile-actions">
+                 <button id="save-profile-button">Kaydet</button>
+                 <button class="switch-button" onclick="showRoomSelectionForm(currentUsername)">Geri Dön</button>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div id="chat-container">
+            <div id="room-info">
+                <span id="current-room"></span>
+                <div style="display: flex; align-items: center;">
+                    <img id="chat-user-avatar" src="" alt="User Avatar" style="width: 35px; height: 35px; border-radius: 50%; margin-right: 10px; display: none;">
+                    <span id="current-user"></span>
+                </div>
+            </div>
+            <div id="messages">
+                <!-- Messages will be appended here -->
+            </div>
+            <div id="input-area">
+                <input type="text" id="message-input" placeholder="Mesajını yaz...">
+                <button id="send-button">Gönder</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const roomSelectionForm = document.getElementById('room-selection-form');
+        const profileSection = document.getElementById('profile-section');
+        const chatContainer = document.getElementById('chat-container');
+
+        const loginUsernameInput = document.getElementById('login-username');
+        const loginPasswordInput = document.getElementById('login-password');
+        const loginError = document.getElementById('login-error');
+        const loginButton = document.getElementById('login-button');
+
+        const registerUsernameInput = document.getElementById('register-username');
+        const registerPasswordInput = document.getElementById('register-password');
+        const registerError = document.getElementById('register-error');
+        const registerButton = document.getElementById('register-button');
+
+        const roomCodeInput = document.getElementById('room-code');
+        const roomSelectionError = document.getElementById('room-selection-error');
+        const joinRoomButton = document.getElementById('join-room-button');
+        const currentUserAvatar = document.getElementById('current-user-avatar');
+        const currentUsernameDisplay = document.getElementById('current-username-display');
+        
+        const chatUserAvatar = document.getElementById('chat-user-avatar');
+        const currentRoomSpan = document.getElementById('current-room');
+        const currentUserSpan = document.getElementById('current-user');
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+
+        // Profile Section Elements
+        const profileAvatarPreview = document.getElementById('profile-avatar-preview');
+        const profileUsernameDisplay = document.getElementById('profile-username-display');
+        const profilePictureInput = document.getElementById('profile-picture-input');
+        const uploadStatus = document.getElementById('upload-status');
+        const saveProfileButton = document.getElementById('save-profile-button');
+
+        // --- App State ---
+        let socket;
+        let currentUsername = '';
+        let currentUserProfilePic = null; // Store current user's profile pic URL
+        let currentRoomCode = '';
+
+        // --- Service Worker & Notifications ---
+        function requestNotificationPermission() {
+            if ('Notification' in window && 'serviceWorker' in navigator) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        console.log('Notification permission granted.');
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.register('/sw.js')
+                                .then(registration => {
+                                    console.log('Service worker registered:', registration);
+                                })
+                                .catch(error => {
+                                    console.error('Service worker registration failed:', error);
+                                });
+                        }
+                    } else {
+                        console.log('Notification permission denied.');
+                    }
+                });
+            } else {
+                console.warn('Notifications or Service Workers not supported in this browser.');
+            }
+        }
+
+        // --- Form Navigation ---
+        function hideAllForms() {
+            loginForm.classList.add('hidden');
+            registerForm.classList.add('hidden');
+            roomSelectionForm.classList.add('hidden');
+            profileSection.classList.add('hidden');
+            chatContainer.style.display = 'none';
+        }
+        
+        function showRegisterForm() {
+            hideAllForms();
+            registerForm.classList.remove('hidden');
+            registerUsernameInput.value = '';
+            registerPasswordInput.value = '';
+            registerError.textContent = '';
+        }
+
+        function showLoginForm() {
+            hideAllForms();
+            loginForm.classList.remove('hidden');
+            loginUsernameInput.value = '';
+            loginPasswordInput.value = '';
+            loginError.textContent = '';
+        }
+
+        function showRoomSelectionForm(username, profilePicUrl) {
+            currentUsername = username;
+            currentUserProfilePic = profilePicUrl; // Store profile pic URL
+            
+            currentUsernameDisplay.textContent = `Merhaba, ${username}!`;
+            if (profilePicUrl) {
+                currentUserAvatar.src = profilePicUrl;
+                currentUserAvatar.classList.remove('hidden');
+            } else {
+                 currentUserAvatar.classList.add('hidden'); // Hide if no pic
+            }
+
+            hideAllForms();
+            roomSelectionForm.classList.remove('hidden');
+            roomCodeInput.value = '';
+            roomSelectionError.textContent = '';
+        }
+
+        function showProfileSection() {
+            hideAllForms();
+            profileSection.classList.remove('hidden');
+            profileUsernameDisplay.textContent = currentUsername;
+            
+            // Set preview avatar
+            if (currentUserProfilePic) {
+                profileAvatarPreview.src = currentUserProfilePic;
+                profileAvatarPreview.classList.remove('default');
+            } else {
+                profileAvatarPreview.src = ''; // Clear if no pic
+                profileAvatarPreview.classList.add('default');
+            }
+            profilePictureInput.value = ''; // Clear file input
+            uploadStatus.textContent = '';
+        }
+
+        function showChatScreen(room, username, profilePicUrl) {
+            currentRoomCode = room;
+            currentRoomSpan.textContent = `Oda: ${room}`;
+            currentUserSpan.textContent = username;
+            
+            // Set user avatar in chat header
+            if (profilePicUrl) {
+                chatUserAvatar.src = profilePicUrl;
+                chatUserAvatar.style.display = 'block';
+            } else {
+                chatUserAvatar.style.display = 'none';
+            }
+
+            hideAllForms();
+            chatContainer.style.display = 'flex';
+            messageInput.focus();
+            messagesContainer.innerHTML = ''; // Clear previous messages
+        }
+
+        // --- Socket.IO Connection ---
+        function connectSocket() {
+            const backendUrl = window.location.origin;
+            socket = io(backendUrl);
+
+            socket.on('connect', () => {
+                console.log('Connected to server via Socket.IO');
+                // Re-authenticate or re-join room if necessary after reconnect
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                displayMessage('Admin', 'Sunucu bağlantısı kesildi. Lütfen sayfayı yenileyin.', 'info');
+            });
+
+            // --- Event Listeners ---
+            
+            // Login Success/Failure
+            socket.on('login_success', (data) => {
+                console.log('Login successful:', data);
+                currentUsername = data.username;
+                currentUserProfilePic = data.profilePictureUrl;
+                showRoomSelectionForm(data.username, data.profilePictureUrl);
+            });
+
+            socket.on('login_failed', (message) => {
+                console.error('Login failed:', message);
+                loginError.textContent = message;
+                loginError.classList.add('visible');
+            });
+
+            // Registration Success/Failure
+            socket.on('registration_success', (message) => {
+                alert(message); 
+                showLoginForm();
+            });
+
+            socket.on('registration_failed', (message) => {
+                console.error('Registration failed:', message);
+                registerError.textContent = message;
+                registerError.classList.add('visible');
+            });
+
+            // Message Handling
+            socket.on('message', (data) => {
+                displayMessage(data.username, data.text, data.type, data.time, data.profilePictureUrl, data.id);
+            });
+            
+            // Handle previous messages when joining a room
+            socket.on('previous_messages', ({ roomCode, messages }) => {
+                if (roomCode === currentRoomCode) {
+                    messages.forEach(msg => {
+                        displayMessage(msg.username, msg.text, msg.type, msg.time, msg.profilePictureUrl, msg.id);
+                    });
+                }
+            });
+            
+            // Handle deleted messages
+            socket.on('message_deleted', ({ messageId }) => {
+                const messageElement = document.getElementById(`message-${messageId}`);
+                if (messageElement) {
+                    messageElement.remove();
+                }
+            });
+            
+            // Handle failed delete attempts
+            socket.on('delete_failed', (message) => {
+                alert(message); // Show error to user
+            });
+
+            // Handle notifications for clients not in the current room
+            socket.on('new_message_notification', (data) => {
+                if (data.username !== currentUsername && data.roomCode !== currentRoomCode) {
+                    showNotification(data.username, data.text);
+                }
+            });
+        }
+
+        // --- Message Display ---
+        function displayMessage(username, text, type = 'user', time, profilePicUrl, messageId) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.id = `message-${messageId}`; // Assign ID for deletion
+
+            const isMyMessage = username === currentUsername;
+            const senderClass = isMyMessage ? 'my-message' : type;
+            messageElement.classList.add(senderClass);
+
+            let messageContentHtml = '';
+            
+            if (type === 'info') {
+                messageContentHtml = `<p class="message-content">${text}</p>`;
+                messageElement.classList.add('info');
+            } else {
+                 // Add avatar and sender info for user messages
+                 const avatarSrc = profilePicUrl ? profilePicUrl : '/images/default-avatar.png'; // Use default if no pic
+                 messageContentHtml = `
+                    <div class="message-header">
+                        <img src="${avatarSrc}" alt="Avatar" class="message-avatar">
+                        <span class="message-sender">${username}</span>
+                        <span class="message-time">${time}</span>
+                    </div>
+                    <p class="message-content">${text}</p>
+                `;
+                // If it's my message, align sender/time to the right visually
+                if (isMyMessage) {
+                    messageElement.style.alignItems = 'flex-end'; // Override default left alignment
+                }
+            }
+            
+            messageElement.innerHTML = messageContentHtml;
+
+            // Add delete button only for user's own messages
+            if (isMyMessage && type !== 'info') {
+                const deleteButton = document.createElement('button');
+                deleteButton.classList.add('delete-button');
+                deleteButton.innerHTML = '&times;'; // 'x' symbol
+                deleteButton.onclick = () => deleteMessage(messageId, currentRoomCode, username);
+                messageElement.appendChild(deleteButton);
+            }
+
+            messagesContainer.appendChild(messageElement);
+            
+            // Scroll to the bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // --- Notification Display ---
+        function showNotification(sender, message) {
+            if (!('serviceWorker' in navigator) || !navigator.serviceWorker.ready) {
+                console.log("Service worker isn't ready.");
+                return;
+            }
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(`${sender} yeni mesaj gönderdi!`, {
+                    body: message,
+                    icon: '/icon-192x192.png', 
+                    tag: 'new-message',
+                    vibrate: [200, 100, 200]
+                });
+            });
+        }
+
+        // --- Message Actions ---
+        function deleteMessage(messageId, roomCode, username) {
+            if (!socket || !currentUsername) return;
+            
+            // Confirm deletion
+            if (!confirm('Bu mesajı silmek istediğinizden emin misiniz?')) {
+                return;
+            }
+            
+            socket.emit('delete_message', { messageId, username, roomCode });
+        }
+
+        // --- Profile Picture Upload ---
+        profilePictureInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                uploadStatus.textContent = '';
+                return;
+            }
+
+            // Display preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                profileAvatarPreview.src = e.target.result;
+                profileAvatarPreview.classList.remove('default');
+            };
+            reader.readAsDataURL(file);
+
+            // Prepare form data for upload
+            const formData = new FormData();
+            formData.append('profilePicture', file);
+            formData.append('username', currentUsername); // Send username to backend
+
+            uploadStatus.textContent = 'Yükleniyor...';
+
+            try {
+                const response = await fetch('/api/upload-profile-picture', {
+                    method: 'POST',
+                    body: formData
+                    // Content-Type is automatically set to multipart/form-data by fetch with FormData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    uploadStatus.textContent = 'Resim başarıyla yüklendi!';
+                    currentUserProfilePic = result.url; // Update global profile pic URL
+                    // Update avatar in room selection and chat header if visible
+                    if (!profileSection.classList.contains('hidden')) {
+                         profileAvatarPreview.src = result.url; // Update preview too
+                    }
+                    if (!roomSelectionForm.classList.contains('hidden')) {
+                        currentUserAvatar.src = result.url;
+                    }
+                     if (!chatContainer.style.display === 'flex' && currentRoomCode) { // If chat is active
+                         chatUserAvatar.src = result.url;
+                     }
+                } else {
+                    uploadStatus.textContent = `Hata: ${result.error || response.statusText}`;
+                    console.error('Profile picture upload failed:', result);
+                    // Revert preview if upload fails
+                     if (currentUserProfilePic) {
+                         profileAvatarPreview.src = currentUserProfilePic;
+                     } else {
+                         profileAvatarPreview.classList.add('default');
+                     }
+                }
+            } catch (error) {
+                uploadStatus.textContent = 'Ağ hatası oluştu.';
+                console.error('Network error during upload:', error);
+                 // Revert preview if upload fails
+                 if (currentUserProfilePic) {
+                     profileAvatarPreview.src = currentUserProfilePic;
+                 } else {
+                     profileAvatarPreview.classList.add('default');
+                 }
+            }
+        });
+
+        // --- Event Listeners for Buttons and Inputs ---
+        loginButton.addEventListener('click', () => {
+            const username = loginUsernameInput.value.trim();
+            const password = loginPasswordInput.value.trim();
+            if (username && password) {
+                socket.emit('login', { username, password });
+            } else {
+                loginError.textContent = 'Kullanıcı adı ve şifre gereklidir.';
+                loginError.classList.add('visible');
+            }
+        });
+
+        registerButton.addEventListener('click', () => {
+            const username = registerUsernameInput.value.trim();
+            const password = registerPasswordInput.value.trim();
+            if (username && password) {
+                socket.emit('register', { username, password });
+            } else {
+                registerError.textContent = 'Kullanıcı adı ve şifre gereklidir.';
+                registerError.classList.add('visible');
+            }
+        });
+
+        joinRoomButton.addEventListener('click', () => {
+            const roomCode = roomCodeInput.value.trim().toLowerCase(); 
+            if (roomCode && currentUsername) {
+                // Before joining, ensure socket is connected
+                if (socket.connected) {
+                     socket.emit('join_room', { username: currentUsername, roomCode: roomCode });
+                     showChatScreen(roomCode, currentUsername, currentUserProfilePic);
+                } else {
+                     roomSelectionError.textContent = 'Sunucuya bağlanılamadı. Lütfen tekrar deneyin.';
+                     roomSelectionError.classList.add('visible');
+                }
+            } else {
+                roomSelectionError.textContent = 'Geçerli bir oda kodu girin.';
+                roomSelectionError.classList.add('visible');
+            }
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && socket && socket.connected && currentUsername && currentRoomCode) {
+                const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                // Send message to server, server will add ID and profile pic
+                socket.emit('send_message', {
+                    username: currentUsername,
+                    roomCode: currentRoomCode,
+                    message: message
+                });
+                // Clear input after sending
+                messageInput.value = '';
+            } else if (!socket || !socket.connected) {
+                 alert('Sunucuya bağlı değilsiniz.');
+            }
+        }
+
+        // --- Initial Setup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            requestNotificationPermission(); 
+            connectSocket(); 
+            showLoginForm(); // Start with login form
+        });
+    </script>
+</body>
+</html>
