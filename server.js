@@ -1,12 +1,13 @@
-// --- JSONBin Paketsiz Kurulum (Pure Node.js Fetch) ---
-const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY;
-const JSONBIN_SECRET = process.env.JSONBIN_SECRET; // Eğer master key ise bu yeterli olabilir
-const USER_DATA_BIN_ID = process.env.JSONBIN_ID;
+// --- JSONBin Paketsiz Kurulum (Render Karakter Temizlemeli) ---
+// Render panelinden gelebilecek gizli tırnak işaretlerini veya boşlukları regex ile temizliyoruz
+const JSONBIN_API_KEY = (process.env.JSONBIN_API_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+const JSONBIN_SECRET = (process.env.JSONBIN_SECRET || '').trim().replace(/^['"]|['"]$/g, '');
+const USER_DATA_BIN_ID = (process.env.JSONBIN_ID || '').trim().replace(/^['"]|['"]$/g, '');
 
 // Function to fetch user data from JSONBin (Paketsiz)
 async function getUserData() {
     if (!USER_DATA_BIN_ID) {
-        console.error('USER_DATA_BIN_ID not set in .env file.');
+        console.error('USER_DATA_BIN_ID not set in environment.');
         return { users: [] };
     }
     try {
@@ -14,7 +15,7 @@ async function getUserData() {
             method: 'GET',
             headers: {
                 'X-Master-Key': JSONBIN_API_KEY,
-                'X-Access-Key': JSONBIN_SECRET || JSONBIN_API_KEY // Hangisi gerekliyse
+                'X-Access-Key': JSONBIN_SECRET || JSONBIN_API_KEY
             }
         });
         if (!response.ok) throw new Error(`JSONBin hatası: ${response.statusText}`);
@@ -29,7 +30,7 @@ async function getUserData() {
 // Function to save user data to JSONBin (Paketsiz)
 async function saveUserData(data) {
     if (!USER_DATA_BIN_ID) {
-        console.error('USER_DATA_BIN_ID not set in .env file.');
+        console.error('USER_DATA_BIN_ID not set in environment.');
         return;
     }
     try {
