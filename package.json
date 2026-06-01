@@ -7,13 +7,6 @@
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [
-    "pwa",
-    "chat",
-    "nodejs",
-    "socket.io",
-    "jsonbin"
-  ],
   "author": "Qeat",
   "license": "ISC",
   "dependencies": {
@@ -21,7 +14,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "jsonbin-io": "^1.1.0",
     "multer": "^1.4.5-lts.1",
     "socket.io": "^4.7.5"
   },
