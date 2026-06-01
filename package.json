@@ -1,5 +1,5 @@
 {
-  "name": "pwa-chat-app",
+  "name": "qore-chat-app",
   "version": "1.0.0",
   "description": "A PWA chat application using Node.js, Socket.io, and JSONBin",
   "main": "server.js",
@@ -14,16 +14,18 @@
     "socket.io",
     "jsonbin"
   ],
-  "author": "Your Name",
+  "author": "Qeat",
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "jsonbin-io": "^3.0.2",
+    "jsonbin-io": "^1.1.0",
     "multer": "^1.4.5-lts.1",
-    "nodemon": "^3.1.3",
     "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.3"
   }
 }
