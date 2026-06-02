@@ -13,7 +13,7 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Local JSON Veritabanı (Sunucu içinde saklanır, harici link istemez)
+// Local JSON Veritabanı
 const DATA_FILE = path.join(__dirname, 'database.json');
 
 // Eğer dosya yoksa sıfırdan siber şema oluştur
@@ -178,6 +178,18 @@ io.on('connection', (socket) => {
             activeUsers[currentUsername].status = data.status;
 
             io.emit('user list', Object.values(activeUsers));
+        }
+    });
+
+    // 8. SİSTEMDEN ÇIKIŞ YAPMA (LOGOUT)
+    socket.on('logout user', () => {
+        if (currentUsername) {
+            delete activeUsers[currentUsername]; // Aktif listeden siber kimliği sil
+            io.emit('user list', Object.values(activeUsers)); // Diğer kullanıcılara listeyi güncelle
+            
+            socket.leave(currentRoom); // Odadan güvenli çıkış yap
+            currentUsername = ""; // Hafızayı temizle
+            socket.emit('logout success'); // Arayüze başarılı sinyali gönder
         }
     });
 
