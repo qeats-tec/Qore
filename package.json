@@ -4,6 +4,7 @@
   "description": "Qore Messaging App - Node.js Local Version",
   "main": "server.js",
   "scripts": {
+    "preinstall": "npm rebuild sqlite3",
     "dev": "nodemon server.js",
     "start": "node server.js"
   },
