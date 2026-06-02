@@ -3,10 +3,9 @@ const socket = io();
 // =========================================
 // OYNATILABİLİR SİBER RENK HAFIZASI
 // =========================================
-// Sayfa açıldığında kaydedilmiş bir renk teması varsa yükle (Varsayılan: Yeşil)
 const savedColor = localStorage.getItem('qore_theme_color') || '#00ff66';
 document.documentElement.style.setProperty('--neon-color', savedColor);
-document.documentElement.style.setProperty('--neon-glow', savedColor + '33'); // %20 parlama efekti
+document.documentElement.style.setProperty('--neon-glow', savedColor + '33');
 
 // =========================================
 // PWA SERVICE WORKER AKTİVASYONU
@@ -60,6 +59,9 @@ const settingsBio = document.getElementById('settings-bio');
 const settingsStatus = document.getElementById('settings-status');
 const settingsAvatarFile = document.getElementById('settings-avatar-file');
 const avatarPreview = document.getElementById('avatar-preview');
+
+// SİSTEMDEN ÇIKIŞ ELEMENTİ
+const logoutBtn = document.getElementById('logout-btn');
 
 // BAŞKASININ PROFİL MODAL ELEMENTLERİ
 const userProfileModal = document.getElementById('user-profile-modal');
@@ -126,6 +128,13 @@ loginSubmitBtn.addEventListener('click', () => {
     }
 });
 
+// SİSTEMDEN ÇIKIŞ YAPMA TETİKLEYİCİSİ
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        socket.emit('logout user');
+    });
+}
+
 // SOKET DOĞRULAMA CEVAPLARI
 socket.on('auth success', (data) => {
     alert(data.message);
@@ -137,7 +146,7 @@ socket.on('auth success', (data) => {
 socket.on('login success', (data) => {
     myUsername = data.username;
     
-    // İsmi yerel hafızaya kaydet (Sayfa yenilenince düşmesin)
+    // İsmi yerel hafızaya kaydet
     localStorage.setItem('qore_username', data.username);
 
     base64Avatar = data.userVeri.avatar_url || '';
@@ -148,6 +157,12 @@ socket.on('login success', (data) => {
     setupContainer.classList.add('hidden');
     mainWrapper.classList.remove('hidden');
     messageInput.focus();
+});
+
+// Sunucudan Çıkış Onayı Geldiğinde Hafızayı Sıfırla ve Yenile
+socket.on('logout success', () => {
+    localStorage.removeItem('qore_username');
+    window.location.reload();
 });
 
 socket.on('auth error', (msg) => {
@@ -167,10 +182,8 @@ openSettingsBtn.addEventListener('click', () => {
 closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
 closeUserModalBtn.addEventListener('click', () => userProfileModal.classList.add('hidden'));
 
-// Renk seçici kutusunda renk değiştikçe hex metnini canlı güncelle
 document.getElementById('settings-theme-color').addEventListener('input', (e) => {
     document.getElementById('color-hex-text').textContent = e.target.value.toUpperCase();
-    // Opsiyonel: Renk seçilirken arkada canlı canlı temayı da değiştirsin
     document.documentElement.style.setProperty('--neon-color', e.target.value);
     document.documentElement.style.setProperty('--neon-glow', e.target.value + '33');
 });
@@ -195,7 +208,6 @@ settingsAvatarFile.addEventListener('change', (e) => {
 saveSettingsBtn.addEventListener('click', () => {
     const chosenColor = document.getElementById('settings-theme-color').value;
     
-    // Rengi yerel hafızaya tam kaydet
     localStorage.setItem('qore_theme_color', chosenColor);
     document.documentElement.style.setProperty('--neon-color', chosenColor);
     document.documentElement.style.setProperty('--neon-glow', chosenColor + '33');
@@ -258,7 +270,6 @@ socket.on('chat history', (messages) => {
 socket.on('chat message', (data) => {
     appendMessage(data);
 
-    // ANLIK BİLDİRİM MOTORU
     if (data.username !== myUsername && document.hidden) {
         if (Notification.permission === "granted") {
             const notification = new Notification(`QORE // Yeni Mesaj`, {
