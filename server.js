@@ -3,11 +3,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const { Client } = require('pg');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    maxHttpBufferSize: 1e7 // Resim yüklemeleri için boyutu 10MB yaptık
+    maxHttpBufferSize: 1e7 // 10MB Profil Resmi Desteği
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -17,21 +18,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 // =========================================
 const db = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // Render ile Supabase arası güvenli SSL bağlantısı
+    ssl: { rejectUnauthorized: false }
 });
 
 db.connect()
     .then(() => console.log('🚀 SUPABASE: Siber veri ağı kalıcı olarak bağlandı!'))
-    .catch(err => console.error('❌ VERİTABANI BAĞLANTI HATASI:', err));
+    .catch(err => console.error('❌ VERİBATANI BAĞLANTI HATASI:', err));
 
-// Aktif soketleri takip etmek için hafıza kartı
 const activeUsers = {}; 
 
 io.on('connection', (socket) => {
     let currentUsername = "";
     let currentRoom = "Genel";
 
-    // 1. OTOMATİK GİRİŞ (AUTO AUTH)
+    // 1. OTOMATİK GİRİŞ
     socket.on('auto auth', async (data) => {
         try {
             const res = await db.query('SELECT * FROM users WHERE username = $1', [data.username]);
@@ -47,7 +47,6 @@ io.on('connection', (socket) => {
                 
                 socket.emit('login success', { username: currentUsername, userVeri: activeUsers[currentUsername] });
                 
-                // Odaları ve geçmişi gönder
                 sendRoomList();
                 sendChatHistory(socket, currentRoom);
                 sendUserList();
@@ -55,44 +54,56 @@ io.on('connection', (socket) => {
         } catch (err) { console.error(err); }
     });
 
-    // 2. KAYIT OLMA (REGISTER)
+    // 2. ŞİFRELİ KAYIT OLMA
     socket.on('register user', async (data) => {
         try {
             const res = await db.query('SELECT * FROM users WHERE username = $1', [data.username]);
             if (res.rows.length > 0) {
                 socket.emit('auth error', 'Bu siber kimlik veritabanında zaten kayıtlı!');
             } else {
-                await db.query('INSERT INTO users (username, password) VALUES ($1, $2)', [data.username, data.password]);
-                socket.emit('auth success', { message: 'Kimlik başarıyla işlendi. Giriş yapabilirsiniz.', username: data.username });
+                const saltRounds = 10;
+                const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+
+                await db.query('INSERT INTO users (username, password) VALUES ($1, $2)', [data.username, hashedPassword]);
+                socket.emit('auth success', { message: 'Kimlik başarıyla kriptolanarak işlendi. Giriş yapabilirsiniz.', username: data.username });
             }
         } catch (err) {
-            socket.emit('auth error', 'Sistem hatası meydana geldi.');
+            console.error(err);
+            socket.emit('auth error', 'Kayıt sırasında siber bir hata oluştu.');
         }
     });
 
-    // 3. GİRİŞ YAPMA (LOGIN)
+    // 3. KRİPTOLU GİRİŞ YAPMA
     socket.on('login user', async (data) => {
         try {
-            const res = await db.query('SELECT * FROM users WHERE username = $1 AND password = $2', [data.username, data.password]);
+            const res = await db.query('SELECT * FROM users WHERE username = $1', [data.username]);
             if (res.rows.length > 0) {
-                currentUsername = res.rows[0].username;
-                activeUsers[currentUsername] = {
-                    username: currentUsername,
-                    status: res.rows[0].status,
-                    bio: res.rows[0].bio,
-                    avatar_url: res.rows[0].avatar_url
-                };
-                socket.join(currentRoom);
+                const userInDb = res.rows[0];
+                const match = await bcrypt.compare(data.password, userInDb.password);
 
-                socket.emit('login success', { username: currentUsername, userVeri: activeUsers[currentUsername] });
-                
-                sendRoomList();
-                sendChatHistory(socket, currentRoom);
-                sendUserList();
+                if (match) {
+                    currentUsername = userInDb.username;
+                    activeUsers[currentUsername] = {
+                        username: currentUsername,
+                        status: userInDb.status,
+                        bio: userInDb.bio,
+                        avatar_url: userInDb.avatar_url
+                    };
+                    socket.join(currentRoom);
+
+                    socket.emit('login success', { username: currentUsername, userVeri: activeUsers[currentUsername] });
+                    
+                    sendRoomList();
+                    sendChatHistory(socket, currentRoom);
+                    sendUserList();
+                } else {
+                    socket.emit('auth error', 'Erişim anahtarı veya kimlik tanımı geçersiz!');
+                }
             } else {
                 socket.emit('auth error', 'Erişim anahtarı veya kimlik tanımı geçersiz!');
             }
         } catch (err) {
+            console.error(err);
             socket.emit('auth error', 'Giriş sırasında sistem hatası.');
         }
     });
@@ -150,12 +161,10 @@ io.on('connection', (socket) => {
         } catch (err) { console.error(err); }
     });
 
-    // YAZIYOR SİNYALİ
     socket.on('typing', (isTyping) => {
         socket.to(currentRoom).emit('user typing', { username: currentUsername, isTyping });
     });
 
-    // BAĞLANTI KOPUNCA
     socket.on('disconnect', () => {
         if (currentUsername) {
             delete activeUsers[currentUsername];
@@ -164,7 +173,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// YARDIMCI FONKSİYONLAR (BULUTTAN VERİ ÇEKME)
 async function sendRoomList() {
     try {
         const res = await db.query('SELECT room_name FROM rooms');
