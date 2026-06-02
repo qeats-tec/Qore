@@ -1,5 +1,14 @@
 const socket = io();
 
+// =========================================
+// PWA SERVICE WORKER AKTİVASYONU
+// =========================================
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('🛡️ Qore PWA Motoru Aktif.'))
+        .catch((err) => console.log('PWA Hatası:', err));
+}
+
 // KİMLİK DOĞRULAMA ELEMENTLERİ
 const setupContainer = document.getElementById('setup-container');
 const mainWrapper = document.getElementById('main-wrapper');
@@ -57,8 +66,14 @@ let activeRoom = "Genel";
 let base64Avatar = ""; 
 
 // =========================================
-// GİRİŞ / KAYIT SEKMELERİ ARASI GEÇİŞ MANTIĞI
+// OTOMATİK OTURUM KORUMA (SAYFA YENİLENİNCE)
 // =========================================
+const savedUsername = localStorage.getItem('qore_username');
+if (savedUsername) {
+    socket.emit('auto auth', { username: savedUsername });
+}
+
+// GİRİŞ / KAYIT SEKMELERİ ARASI GEÇİŞ MANTIĞI
 tabLogin.addEventListener('click', () => {
     tabLogin.classList.add('active');
     tabRegister.classList.remove('active');
@@ -75,15 +90,10 @@ tabRegister.addEventListener('click', () => {
     authSubtitle.textContent = "Yeni bir siber kimlik oluşturun ve veritabanına işleyin.";
 });
 
-// =========================================
 // SUNUCUYA KAYIT VE GİRİŞ EMİRLERİ
-// =========================================
-
-// 1. Kayıt Olma İsteyi fırlat
 registerSubmitBtn.addEventListener('click', () => {
     const user = registerUsernameInput.value.trim();
     const pass = registerPasswordInput.value;
-
     if (user && pass) {
         socket.emit('register user', { username: user, password: pass });
     } else {
@@ -91,11 +101,9 @@ registerSubmitBtn.addEventListener('click', () => {
     }
 });
 
-// 2. Giriş Yapma İsteği fırlat
 loginSubmitBtn.addEventListener('click', () => {
     const user = loginUsernameInput.value.trim();
     const pass = loginPasswordInput.value;
-
     if (user && pass) {
         socket.emit('login user', { username: user, password: pass });
     } else {
@@ -103,23 +111,20 @@ loginSubmitBtn.addEventListener('click', () => {
     }
 });
 
-// =========================================
 // SOKET DOĞRULAMA CEVAPLARI
-// =========================================
-
-// Kayıt Başarılı Olunca Giriş Sekmesine At
 socket.on('auth success', (data) => {
     alert(data.message);
-    tabLogin.click(); // Otomatik giriş sekmesine yönlendir
+    tabLogin.click();
     loginUsernameInput.value = data.username;
     loginPasswordInput.focus();
 });
 
-// Giriş Başarılı Olunca Ana Paneli Aç
 socket.on('login success', (data) => {
     myUsername = data.username;
     
-    // Kullanıcının kayıtlı verilerini modal önizlemesine yükle
+    // İsmi yerel hafızaya kaydet (Sayfa yenilenince düşmesin)
+    localStorage.setItem('qore_username', data.username);
+
     base64Avatar = data.userVeri.avatar_url || '';
     avatarPreview.src = base64Avatar || 'https://www.w3schools.com/howto/img_avatar.png';
     settingsBio.value = data.userVeri.bio || 'Qore kullanıcısı.';
@@ -130,19 +135,15 @@ socket.on('login success', (data) => {
     messageInput.focus();
 });
 
-// Hataları Ekrana Bas (Şifre yanlış, kullanıcı var vs.)
 socket.on('auth error', (msg) => {
     alert(`❌ HATA: ${msg}`);
 });
 
-// =========================================
 // MODALLAR VE PROFIL GÜNCELLEME MANTIĞI
-// =========================================
 openSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
 closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
 closeUserModalBtn.addEventListener('click', () => userProfileModal.classList.add('hidden'));
 
-// Resim seçildiğinde Base64'e çevirip önizle
 settingsAvatarFile.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -170,9 +171,7 @@ saveSettingsBtn.addEventListener('click', () => {
     settingsModal.classList.add('hidden');
 });
 
-// =========================================
 // SOHBET VE ODA FONKSİYONLARI
-// =========================================
 createRoomBtn.addEventListener('click', () => {
     const rName = newRoomInput.value.trim();
     if (rName) { socket.emit('create room', rName); newRoomInput.value = ''; }
@@ -254,7 +253,6 @@ socket.on('user list', (users) => {
             viewUserStatus.className = `status-tag u-status ${user.status}`;
             viewUserStatus.textContent = user.status === 'online' ? 'Çevrimiçi' : user.status === 'idle' ? 'Boşta' : 'Meşgul';
             viewUserStatus.style.color = '#000'; 
-            
             userProfileModal.classList.remove('hidden');
         });
 
