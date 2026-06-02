@@ -4,7 +4,7 @@
   "description": "Qore Messaging App - Node.js Local Version",
   "main": "server.js",
   "scripts": {
-    "preinstall": "npm rebuild sqlite3",
+    "preinstall": "npm config set sqlite3_binary_host_mirror https://custom-mirror-disabled && npm install --build-from-source sqlite3",
     "dev": "nodemon server.js",
     "start": "node server.js"
   },
