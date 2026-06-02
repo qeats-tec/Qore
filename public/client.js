@@ -1,6 +1,14 @@
 const socket = io();
 
 // =========================================
+// OYNATILABİLİR SİBER RENK HAFIZASI
+// =========================================
+// Sayfa açıldığında kaydedilmiş bir renk teması varsa yükle (Varsayılan: Yeşil)
+const savedColor = localStorage.getItem('qore_theme_color') || '#00ff66';
+document.documentElement.style.setProperty('--neon-color', savedColor);
+document.documentElement.style.setProperty('--neon-glow', savedColor + '33'); // %20 parlama efekti
+
+// =========================================
 // PWA SERVICE WORKER AKTİVASYONU
 // =========================================
 if ('serviceWorker' in navigator) {
@@ -146,10 +154,26 @@ socket.on('auth error', (msg) => {
     alert(`❌ HATA: ${msg}`);
 });
 
+// =========================================
 // MODALLAR VE PROFIL GÜNCELLEME MANTIĞI
-openSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+// =========================================
+openSettingsBtn.addEventListener('click', () => {
+    const currentColor = localStorage.getItem('qore_theme_color') || '#00ff66';
+    document.getElementById('settings-theme-color').value = currentColor;
+    document.getElementById('color-hex-text').textContent = currentColor.toUpperCase();
+    settingsModal.classList.remove('hidden');
+});
+
 closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
 closeUserModalBtn.addEventListener('click', () => userProfileModal.classList.add('hidden'));
+
+// Renk seçici kutusunda renk değiştikçe hex metnini canlı güncelle
+document.getElementById('settings-theme-color').addEventListener('input', (e) => {
+    document.getElementById('color-hex-text').textContent = e.target.value.toUpperCase();
+    // Opsiyonel: Renk seçilirken arkada canlı canlı temayı da değiştirsin
+    document.documentElement.style.setProperty('--neon-color', e.target.value);
+    document.documentElement.style.setProperty('--neon-glow', e.target.value + '33');
+});
 
 settingsAvatarFile.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -169,6 +193,13 @@ settingsAvatarFile.addEventListener('change', (e) => {
 });
 
 saveSettingsBtn.addEventListener('click', () => {
+    const chosenColor = document.getElementById('settings-theme-color').value;
+    
+    // Rengi yerel hafızaya tam kaydet
+    localStorage.setItem('qore_theme_color', chosenColor);
+    document.documentElement.style.setProperty('--neon-color', chosenColor);
+    document.documentElement.style.setProperty('--neon-glow', chosenColor + '33');
+
     const data = {
         avatar_url: base64Avatar,
         bio: settingsBio.value.trim() || 'Qore kullanıcısı.',
@@ -228,7 +259,6 @@ socket.on('chat message', (data) => {
     appendMessage(data);
 
     // ANLIK BİLDİRİM MOTORU
-    // Mesajı atan biz değilsek ve sayfa arka plandaysa bildirim fırlat
     if (data.username !== myUsername && document.hidden) {
         if (Notification.permission === "granted") {
             const notification = new Notification(`QORE // Yeni Mesaj`, {
