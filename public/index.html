@@ -3,137 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qore // Network</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Qore // Cryptographic Network</title>
+    <link rel="stylesheet" href="/style.css">
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00ff66">
+    <meta name="apple-mobile-web-app-capable" content="yes">
 </head>
 <body>
-    <div id="setup-container" class="login-card">
-        <div class="login-header">
-            <h2>QORE // INTERFACE</h2>
-            <p id="auth-subtitle">Sisteme erişim sağlamak için kimlik doğrulaması yapın.</p>
-        </div>
 
-        <div class="auth-tabs">
-            <button id="tab-login" class="auth-tab active">GİRİŞ YAP</button>
-            <button id="tab-register" class="auth-tab">KAYIT OL</button>
-        </div>
+    <div id="setup-container" class="auth-wrapper">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="glitch-logo">QORE // NETWORK</div>
+                <p id="auth-subtitle">Sisteme erişim sağlamak için kimlik doğrulaması yapın.</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <button id="tab-login" class="tab-btn active">GİRİŞ YAP</button>
+                <button id="tab-register" class="tab-btn">KAYIT OL</button>
+            </div>
 
-        <div id="login-form-area" class="auth-form-block">
-            <div class="input-group">
-                <input type="text" id="login-username" required autocomplete="off">
-                <label>Kullanıcı Adı</label>
-                <span class="bar"></span>
+            <div id="login-form-area" class="auth-form">
+                <div class="input-group">
+                    <label>SİBER KİMLİK (USER)</label>
+                    <input type="text" id="login-username" placeholder="Kullanıcı adınızı girin..." autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>ERİŞİM ANAHTARI (PASS)</label>
+                    <input type="password" id="login-password" placeholder="••••••••">
+                </div>
+                <button id="login-submit-btn" class="cyber-btn">SİSTEME SIZ</button>
             </div>
-            <div class="input-group">
-                <input type="password" id="login-password" required autocomplete="off">
-                <label>Şifre</label>
-                <span class="bar"></span>
-            </div>
-            <button id="login-submit-btn">Erişim İste</button>
-        </div>
 
-        <div id="register-form-area" class="auth-form-block hidden">
-            <div class="input-group">
-                <input type="text" id="register-username" required autocomplete="off">
-                <label>Yeni Kullanıcı Adı</label>
-                <span class="bar"></span>
+            <div id="register-form-area" class="auth-form hidden">
+                <div class="input-group">
+                    <label>YENİ KİMLİK TANIMI</label>
+                    <input type="text" id="register-username" placeholder="Benzersiz bir ad seçin..." autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>GÜVENLİK ŞİFRESİ</label>
+                    <input type="password" id="register-password" placeholder="Güçlü bir şifre girin...">
+                </div>
+                <button id="register-submit-btn" class="cyber-btn register">VERİTABANINA İŞLE</button>
             </div>
-            <div class="input-group">
-                <input type="password" id="register-password" required autocomplete="off">
-                <label>Güvenli Şifre</label>
-                <span class="bar"></span>
-            </div>
-            <button id="register-submit-btn">Veritabanına Kaydet</button>
         </div>
     </div>
 
     <div id="main-wrapper" class="hidden">
-        <div id="sidebar">
-            <div class="sidebar-section card">
-                <div class="section-header">
-                    <h4>Odalar</h4>
-                </div>
-                <ul id="room-list"></ul>
-                <div class="room-creater">
-                    <input type="text" id="new-room-input" placeholder="+ Oda adı..." autocomplete="off">
-                    <button id="create-room-btn">Ekle</button>
+        <aside class="side-panel">
+            <div class="panel-section">
+                <h3>// KANALLAR</h3>
+                <ul id="room-list" class="cyber-list"></ul>
+                <div class="create-room-wrapper">
+                    <input type="text" id="new-room-input" placeholder="Oda adı..." autocomplete="off">
+                    <button id="create-room-btn">+</button>
                 </div>
             </div>
+            <div class="panel-section">
+                <h3>// AKTİF KULLANICILAR</h3>
+                <ul id="user-list" class="cyber-list users"></ul>
+            </div>
+            <button id="open-settings-btn" class="profile-settings-trigger">⚙️ PROFİLİMİ DÜZENLE</button>
+        </aside>
 
-            <div class="sidebar-section card flex-1">
-                <div class="section-header">
-                    <h4>Odadakiler</h4>
-                </div>
-                <ul id="user-list"></ul>
-                <button id="open-settings-btn">⚙️ Profili Düzenle</button>
-            </div>
-        </div>
+        <main class="chat-area">
+            <header class="chat-header">
+                <h2 id="current-room-title">Qore // Genel</h2>
+            </header>
+            
+            <div id="messages-display" class="messages-container"></div>
+            
+            <div id="typing-indicator" class="typing-text hidden">biri yazıyor...</div>
 
-        <div id="chat-container" class="card">
-            <div class="chat-header">
-                <div class="status-dot"></div>
-                <h3 id="current-room-title">Qore // Genel</h3>
-            </div>
-            <div id="messages-display"></div>
-            <div id="typing-indicator" class="hidden"></div>
-            <form id="chat-form">
-                <input type="text" id="message-input" placeholder="Mesaj dizisi gönder..." autocomplete="off" required>
-                <button type="submit">Gönder</button>
+            <form id="chat-form" class="chat-input-wrapper">
+                <input type="text" id="message-input" placeholder="Matrise bir mesaj gönder..." autocomplete="off">
+                <button type="submit" class="send-btn">GÖNDER</button>
             </form>
-        </div>
+        </main>
     </div>
 
-    <div id="settings-modal" class="modal-wrapper hidden">
-        <div class="modal-content card">
-            <h3>⚙️ Profil Ayarları</h3>
-            <hr class="modal-divider">
-            
-            <label>Profil Resmi Seç (PNG, JPG)</label>
-            <div class="file-upload-wrapper">
-                <input type="file" id="settings-avatar-file" accept="image/png, image/jpeg, image/jpg">
-            </div>
-            
-            <div class="avatar-preview-container">
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>// PROFİL ALTYAPISINI GÜNCELLE</h3>
+            <div class="avatar-edit-wrapper">
                 <img id="avatar-preview" src="https://www.w3schools.com/howto/img_avatar.png" alt="Önizleme">
-                <span>Görsel Önizleme</span>
+                <input type="file" id="settings-avatar-file" accept="image/png, image/jpeg">
             </div>
-
-            <label>Hakkında (Bio)</label>
-            <input type="text" id="settings-bio" placeholder="Siber dünyada geziniyor...">
-
-            <label>Durum Seçimi</label>
-            <select id="settings-status">
-                <option value="online">🟢 Çevrimiçi</option>
-                <option value="idle">🟡 Boşta</option>
-                <option value="dnd">🔴 Rahatsız Etmeyin</option>
-            </select>
-
-            <div class="modal-buttons">
-                <button id="save-settings-btn">Kaydet</button>
-                <button id="close-settings-btn" class="cancel-btn">Kapat</button>
+            <div class="input-group">
+                <label>DURUM SİNYALİ</label>
+                <select id="settings-status">
+                    <option value="online">Çevrimiçi (Online)</option>
+                    <option value="idle">Boşta (Idle)</option>
+                    <option value="dnd">Rahatsız Etmeyin (DND)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>BİYOGRAFİ (BIO)</label>
+                <textarea id="settings-bio" rows="3" placeholder="Kendinden bahset..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button id="save-settings-btn" class="cyber-btn text-btn">KAYDET</button>
+                <button id="close-settings-btn" class="cyber-btn text-btn cancel">İPTAL</button>
             </div>
         </div>
     </div>
 
-    <div id="user-profile-modal" class="modal-wrapper hidden">
-        <div class="modal-content card user-view-card">
-            <div class="user-view-header">
-                <img id="view-user-avatar" src="" alt="avatar">
-                <div class="user-view-meta">
-                    <h3 id="view-user-name">Kullanıcı Adı</h3>
-                    <span id="view-user-status" class="status-tag">online</span>
-                </div>
+    <div id="user-profile-modal" class="modal hidden">
+        <div class="modal-content profile-view">
+            <div class="profile-view-header">
+                <img id="view-user-avatar" src="" alt="PP">
+                <h3 id="view-user-name">Kullanıcı</h3>
+                <span id="view-user-status" class="status-tag">Online</span>
             </div>
-            <hr class="modal-divider">
-            <label>Hakkında (Bio)</label>
-            <p id="view-user-bio" class="bio-display-box">Yükleniyor...</p>
-            <div class="modal-buttons">
-                <button id="close-user-modal-btn" class="cancel-btn">Kapat</button>
+            <div class="profile-view-body">
+                <label>// SİBER BİYOGRAFİ</label>
+                <p id="view-user-bio">Yükleniyor...</p>
             </div>
+            <button id="close-user-modal-btn" class="cyber-btn text-btn">PANELİ KAPAT</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js"></script>
+    <script src="/client.js"></script>
 </body>
 </html>
