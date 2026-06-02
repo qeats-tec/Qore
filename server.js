@@ -1,196 +1,188 @@
-require('dotenv').config();
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const path = require('path');
+const { Client } = require('pg');
+
 const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
-const Database = require('better-sqlite3'); // Yeni ve sorunsuz kütüphane
-const bcrypt = require('bcrypt');
+const server = http.createServer(app);
+const io = new Server(server, {
+    maxHttpBufferSize: 1e7 // Resim yüklemeleri için boyutu 10MB yaptık
+});
 
-const PORT = process.env.PORT || 3000;
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(express.static('public'));
+// =========================================
+// SUPABASE POSTGRESQL BAĞLANTISI
+// =========================================
+const db = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false } // Render ile Supabase arası güvenli SSL bağlantısı
+});
 
-// Veritabanı bağlantısı ve tablolar (Senkron ve aşırı hızlı)
-const db = new Database('./database.db');
+db.connect()
+    .then(() => console.log('🚀 SUPABASE: Siber veri ağı kalıcı olarak bağlandı!'))
+    .catch(err => console.error('❌ VERİTABANI BAĞLANTI HATASI:', err));
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT,
-        avatar_url TEXT DEFAULT '',
-        bio TEXT DEFAULT 'Qore kullanıcısı.',
-        status TEXT DEFAULT 'online'
-    )
-`);
-
-db.exec(`CREATE TABLE IF NOT EXISTS rooms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)`);
-db.prepare("INSERT OR IGNORE INTO rooms (name) VALUES ('Genel')").run();
-db.exec(`CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, room TEXT, username TEXT, message TEXT, time TEXT)`);
-
-console.log('🗄️ Better-SQLite3 Şifreli Hesap Sistemi Render üzerinde aktif.');
-
-let roomUsers = {};
+// Aktif soketleri takip etmek için hafıza kartı
+const activeUsers = {}; 
 
 io.on('connection', (socket) => {
+    let currentUsername = "";
     let currentRoom = "Genel";
-    let myUsername = "";
 
-    // OTOMATİK OTURUM DOĞRULAMA (SAYFA YENİLENİNCE)
-    socket.on('auto auth', ({ username }) => {
-        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-        if (user) {
-            myUsername = user.username;
-            socket.join(currentRoom);
-
-            if (!roomUsers[currentRoom]) roomUsers[currentRoom] = {};
-            roomUsers[currentRoom][socket.id] = {
-                username: user.username,
-                avatar_url: user.avatar_url,
-                status: user.status,
-                bio: user.bio
-            };
-
-            socket.emit('login success', { username: user.username, userVeri: user });
-
-            const rooms = db.prepare('SELECT name FROM rooms').all();
-            socket.emit('room list', rooms.map(r => r.name));
-
-            const history = db.prepare('SELECT username, message, time FROM messages WHERE room = ? ORDER BY id ASC LIMIT 50').all(currentRoom);
-            socket.emit('chat history', history);
-
-            io.to(currentRoom).emit('user list', Object.values(roomUsers[currentRoom]));
-        }
-    });
-
-    // HESAP KAYIT İŞLEMİ
-    socket.on('register user', async ({ username, password }) => {
-        const cleanName = username.trim();
-        if (!cleanName || !password) {
-            return socket.emit('auth error', 'Kullanıcı adı veya şifre boş olamaz.');
-        }
-
+    // 1. OTOMATİK GİRİŞ (AUTO AUTH)
+    socket.on('auto auth', async (data) => {
         try {
-            const hashedPassword = await bcrypt.hash(password, 10);
-            db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(cleanName, hashedPassword);
-            socket.emit('auth success', { username: cleanName, message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
+            const res = await db.query('SELECT * FROM users WHERE username = $1', [data.username]);
+            if (res.rows.length > 0) {
+                currentUsername = res.rows[0].username;
+                activeUsers[currentUsername] = {
+                    username: currentUsername,
+                    status: res.rows[0].status,
+                    bio: res.rows[0].bio,
+                    avatar_url: res.rows[0].avatar_url
+                };
+                socket.join(currentRoom);
+                
+                socket.emit('login success', { username: currentUsername, userVeri: activeUsers[currentUsername] });
+                
+                // Odaları ve geçmişi gönder
+                sendRoomList();
+                sendChatHistory(socket, currentRoom);
+                sendUserList();
+            }
+        } catch (err) { console.error(err); }
+    });
+
+    // 2. KAYIT OLMA (REGISTER)
+    socket.on('register user', async (data) => {
+        try {
+            const res = await db.query('SELECT * FROM users WHERE username = $1', [data.username]);
+            if (res.rows.length > 0) {
+                socket.emit('auth error', 'Bu siber kimlik veritabanında zaten kayıtlı!');
+            } else {
+                await db.query('INSERT INTO users (username, password) VALUES ($1, $2)', [data.username, data.password]);
+                socket.emit('auth success', { message: 'Kimlik başarıyla işlendi. Giriş yapabilirsiniz.', username: data.username });
+            }
         } catch (err) {
-            socket.emit('auth error', 'Bu kullanıcı adı zaten alınmış.');
+            socket.emit('auth error', 'Sistem hatası meydana geldi.');
         }
     });
 
-    // HESAP GİRİŞ İŞLEMİ
-    socket.on('login user', async ({ username, password }) => {
-        const cleanName = username.trim();
-        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(cleanName);
+    // 3. GİRİŞ YAPMA (LOGIN)
+    socket.on('login user', async (data) => {
+        try {
+            const res = await db.query('SELECT * FROM users WHERE username = $1 AND password = $2', [data.username, data.password]);
+            if (res.rows.length > 0) {
+                currentUsername = res.rows[0].username;
+                activeUsers[currentUsername] = {
+                    username: currentUsername,
+                    status: res.rows[0].status,
+                    bio: res.rows[0].bio,
+                    avatar_url: res.rows[0].avatar_url
+                };
+                socket.join(currentRoom);
 
-        if (!user) {
-            return socket.emit('auth error', 'Kullanıcı bulunamadı.');
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return socket.emit('auth error', 'Hatalı şifre saptandı!');
-        }
-
-        myUsername = cleanName;
-        socket.join(currentRoom);
-
-        if (!roomUsers[currentRoom]) roomUsers[currentRoom] = {};
-        roomUsers[currentRoom][socket.id] = {
-            username: user.username,
-            avatar_url: user.avatar_url,
-            status: user.status,
-            bio: user.bio
-        };
-
-        socket.emit('login success', { username: user.username, userVeri: user });
-
-        const rooms = db.prepare('SELECT name FROM rooms').all();
-        socket.emit('room list', rooms.map(r => r.name));
-
-        const history = db.prepare('SELECT username, message, time FROM messages WHERE room = ? ORDER BY id ASC LIMIT 50').all(currentRoom);
-        socket.emit('chat history', history);
-
-        io.to(currentRoom).emit('user list', Object.values(roomUsers[currentRoom]));
-    });
-
-    // Profil Güncelleme
-    socket.on('update profile', (data) => {
-        if (!myUsername) return;
-
-        db.prepare('UPDATE users SET avatar_url = ?, bio = ?, status = ? WHERE username = ?')
-          .run(data.avatar_url, data.bio, data.status, myUsername);
-
-        if (roomUsers[currentRoom] && roomUsers[currentRoom][socket.id]) {
-            roomUsers[currentRoom][socket.id].avatar_url = data.avatar_url;
-            roomUsers[currentRoom][socket.id].bio = data.bio;
-            roomUsers[currentRoom][socket.id].status = data.status;
-
-            io.to(currentRoom).emit('user list', Object.values(roomUsers[currentRoom]));
+                socket.emit('login success', { username: currentUsername, userVeri: activeUsers[currentUsername] });
+                
+                sendRoomList();
+                sendChatHistory(socket, currentRoom);
+                sendUserList();
+            } else {
+                socket.emit('auth error', 'Erişim anahtarı veya kimlik tanımı geçersiz!');
+            }
+        } catch (err) {
+            socket.emit('auth error', 'Giriş sırasında sistem hatası.');
         }
     });
 
-    // Oda Değiştirme
-    socket.on('switch room', (newRoom) => {
-        if (!myUsername) return;
-        let myUserData = roomUsers[currentRoom]?.[socket.id];
+    // 4. MESAJ GÖNDERME
+    socket.on('chat message', async (data) => {
+        if (!currentUsername) return;
+        try {
+            await db.query('INSERT INTO messages (room, username, message, time) VALUES ($1, $2, $3, $4)', 
+                [currentRoom, currentUsername, data.message, data.time]);
+            
+            io.to(currentRoom).emit('chat message', {
+                username: currentUsername,
+                message: data.message,
+                time: data.time
+            });
+        } catch (err) { console.error(err); }
+    });
 
+    // 5. ODA DEĞİŞTİRME
+    socket.on('switch room', async (newRoom) => {
         socket.leave(currentRoom);
-        if (roomUsers[currentRoom]) {
-            delete roomUsers[currentRoom][socket.id];
-            io.to(currentRoom).emit('user list', Object.values(roomUsers[currentRoom]));
-        }
-
         currentRoom = newRoom;
         socket.join(currentRoom);
-
-        if (!roomUsers[currentRoom]) roomUsers[currentRoom] = {};
-        if (myUserData) roomUsers[currentRoom][socket.id] = myUserData;
-
-        const history = db.prepare('SELECT username, message, time FROM messages WHERE room = ? ORDER BY id ASC LIMIT 50').all(currentRoom);
-        socket.emit('chat history', history);
-
-        io.to(currentRoom).emit('user list', Object.values(roomUsers[currentRoom]));
+        sendChatHistory(socket, currentRoom);
     });
 
-    socket.on('create room', (roomName) => {
-        const cleanedName = roomName.trim();
-        if (!cleanedName) return;
+    // 6. YENİ ODA OLUŞTURMA
+    socket.on('create room', async (roomName) => {
+        const safeRoom = roomName.replace(/[#]/g, '').trim();
+        if (!safeRoom) return;
         try {
-            db.prepare('INSERT INTO rooms (name) VALUES (?)').run(cleanedName);
-            const rooms = db.prepare('SELECT name FROM rooms').all();
-            io.emit('room list', rooms.map(r => r.name));
-        } catch (err) {
-            socket.emit('room error', 'Bu oda zaten mevcut.');
-        }
+            const res = await db.query('SELECT * FROM rooms WHERE room_name = $1', [safeRoom]);
+            if (res.rows.length > 0) {
+                socket.emit('room error', 'Bu kanal zaten aktif.');
+            } else {
+                await db.query('INSERT INTO rooms (room_name) VALUES ($1)', [safeRoom]);
+                sendRoomList();
+            }
+        } catch (err) { console.error(err); }
     });
 
-    socket.on('chat message', (data) => {
-        if (!myUsername) return;
-        db.prepare('INSERT INTO messages (room, username, message, time) VALUES (?, ?, ?, ?)').run(
-            currentRoom, data.username, data.message, data.time
-        );
-        io.to(currentRoom).emit('chat message', data);
+    // 7. PROFİL GÜNCELLEME
+    socket.on('update profile', async (data) => {
+        if (!currentUsername) return;
+        try {
+            await db.query('UPDATE users SET avatar_url = $1, bio = $2, status = $3 WHERE username = $4',
+                [data.avatar_url, data.bio, data.status, currentUsername]);
+            
+            activeUsers[currentUsername].avatar_url = data.avatar_url;
+            activeUsers[currentUsername].bio = data.bio;
+            activeUsers[currentUsername].status = data.status;
+
+            sendUserList();
+        } catch (err) { console.error(err); }
     });
 
+    // YAZIYOR SİNYALİ
     socket.on('typing', (isTyping) => {
-        if(roomUsers[currentRoom]?.[socket.id]) {
-            socket.broadcast.emit('user typing', {
-                username: roomUsers[currentRoom][socket.id].username,
-                isTyping: isTyping
-            });
-        }
+        socket.to(currentRoom).emit('user typing', { username: currentUsername, isTyping });
     });
 
+    // BAĞLANTI KOPUNCA
     socket.on('disconnect', () => {
-        if (roomUsers[currentRoom] && roomUsers[currentRoom][socket.id]) {
-            delete roomUsers[currentRoom][socket.id];
-            io.to(currentRoom).emit('user list', Object.values(roomUsers[currentRoom]));
+        if (currentUsername) {
+            delete activeUsers[currentUsername];
+            sendUserList();
         }
     });
 });
 
-http.listen(PORT, () => {
-    console.log(`🚀 Qore Sunucusu http://localhost:${PORT} adresinde aktif!`);
-});
+// YARDIMCI FONKSİYONLAR (BULUTTAN VERİ ÇEKME)
+async function sendRoomList() {
+    try {
+        const res = await db.query('SELECT room_name FROM rooms');
+        const rooms = res.rows.map(r => r.room_name);
+        io.emit('room list', rooms);
+    } catch (err) { console.error(err); }
+}
+
+async function sendChatHistory(socket, room) {
+    try {
+        const res = await db.query('SELECT username, message, time FROM messages WHERE room = $1 ORDER BY id ASC LIMIT 100', [room]);
+        socket.emit('chat history', res.rows);
+    } catch (err) { console.error(err); }
+}
+
+function sendUserList() {
+    io.emit('user list', Object.values(activeUsers));
+}
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`🛡️ Qore Core Terminal active on port ${PORT}`));
