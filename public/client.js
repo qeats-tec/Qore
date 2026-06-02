@@ -73,6 +73,13 @@ if (savedUsername) {
     socket.emit('auto auth', { username: savedUsername });
 }
 
+// =========================================
+// ANLIK BİLDİRİM İZNİ
+// =========================================
+if (Notification.permission === "default") {
+    Notification.requestPermission();
+}
+
 // GİRİŞ / KAYIT SEKMELERİ ARASI GEÇİŞ MANTIĞI
 tabLogin.addEventListener('click', () => {
     tabLogin.classList.add('active');
@@ -217,7 +224,26 @@ socket.on('chat history', (messages) => {
     messages.forEach(data => appendMessage(data));
 });
 
-socket.on('chat message', (data) => appendMessage(data));
+socket.on('chat message', (data) => {
+    appendMessage(data);
+
+    // ANLIK BİLDİRİM MOTORU
+    // Mesajı atan biz değilsek ve sayfa arka plandaysa bildirim fırlat
+    if (data.username !== myUsername && document.hidden) {
+        if (Notification.permission === "granted") {
+            const notification = new Notification(`QORE // Yeni Mesaj`, {
+                body: `${data.username}: ${data.message}`,
+                icon: '/foto.png',
+                tag: 'qore-msg'
+            });
+
+            notification.onclick = () => {
+                window.focus();
+                notification.close();
+            };
+        }
+    }
+});
 
 function appendMessage(data) {
     const isSelf = data.username === myUsername;
