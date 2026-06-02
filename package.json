@@ -7,11 +7,10 @@
     "dev": "nodemon server.js",
     "start": "node server.js"
   },
-  "dependencies": {
-    "bcrypt": "^6.0.0",
-    "better-sqlite3": "^11.0.0",
-    "dotenv": "^16.4.5",
+"dependencies": {
+    "bcrypt": "^5.1.1",
     "express": "^4.19.2",
+    "pg": "^8.11.5",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
