@@ -25,7 +25,7 @@ db.exec(`
 `);
 
 db.exec(`CREATE TABLE IF NOT EXISTS rooms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)`);
-db.prepare('INSERT OR IGNORE INTO rooms (name) VALUES ("Genel")').run();
+db.prepare("INSERT OR IGNORE INTO rooms (name) VALUES ('Genel')").run();
 db.exec(`CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, room TEXT, username TEXT, message TEXT, time TEXT)`);
 
 console.log('🗄️ Better-SQLite3 Şifreli Hesap Sistemi Render üzerinde aktif.');
