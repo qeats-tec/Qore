@@ -11,7 +11,23 @@ const io = new Server(server, {
     maxHttpBufferSize: 1e7 // 10MB Profil Resmi Desteği
 });
 
+// 1. PUBLIC KLASÖRÜNÜ İÇERİK İÇİN DIŞARI AÇ (index.html, client.js, style.css buradan okunacak)
 app.use(express.static(path.join(__dirname, 'public')));
+
+// 2. KÖK DİZİNDEKİ PWA VE LOGO DOSYALARINI DOĞRUDAN SERVİS ET (DIŞARIDAKİLER)
+app.get('/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(__dirname, 'sw.js')); // Direkt kök dizinden okuyor
+});
+
+app.get('/manifest.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.sendFile(path.join(__dirname, 'manifest.json')); // Direkt kök dizinden okuyor
+});
+
+app.get('/foto.png', (req, res) => {
+    res.sendFile(path.join(__dirname, 'foto.png')); // Kök dizindeki logoyu çeker
+});
 
 // Local JSON Veritabanı
 const DATA_FILE = path.join(__dirname, 'database.json');
@@ -21,7 +37,6 @@ if (!fs.existsSync(DATA_FILE)) {
     fs.writeFileSync(DATA_FILE, JSON.stringify({ users: {}, messages: [], rooms: ["Genel"] }, null, 2));
 }
 
-// Veriyi okuma fonksiyonu
 function readData() {
     try {
         return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
@@ -30,7 +45,6 @@ function readData() {
     }
 }
 
-// Veriyi yazma fonksiyonu
 function writeData(data) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
@@ -41,7 +55,7 @@ io.on('connection', (socket) => {
     let currentUsername = "";
     let currentRoom = "Genel";
 
-    // 1. OTOMATİK GİRİŞ
+    // OTOMATİK GİRİŞ
     socket.on('auto auth', (data) => {
         const db = readData();
         if (db.users[data.username]) {
@@ -62,7 +76,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 2. KAYIT OLMA (GÜVENLİ ŞİFRELEME)
+    // KAYIT OLMA
     socket.on('register user', async (data) => {
         const db = readData();
         if (db.users[data.username]) {
@@ -85,7 +99,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 3. GİRİŞ YAPMA
+    // GİRİŞ YAPMA
     socket.on('login user', async (data) => {
         const db = readData();
         const user = db.users[data.username];
@@ -115,7 +129,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 4. MESAJ GÖNDERME
+    // MESAJ GÖNDERME
     socket.on('chat message', (data) => {
         if (!currentUsername) return;
         const db = readData();
@@ -137,7 +151,7 @@ io.on('connection', (socket) => {
         });
     });
 
-    // 5. ODA DEĞİŞTİRME
+    // ODA DEĞİŞTİRME
     socket.on('switch room', (newRoom) => {
         socket.leave(currentRoom);
         currentRoom = newRoom;
@@ -147,7 +161,7 @@ io.on('connection', (socket) => {
         socket.emit('chat history', db.messages.filter(m => m.room === currentRoom).slice(-100));
     });
 
-    // 6. YENİ ODA OLUŞTURMA
+    // YENI ODA OLUŞTURMA
     socket.on('create room', (roomName) => {
         const safeRoom = roomName.replace(/[#]/g, '').trim();
         if (!safeRoom) return;
@@ -162,7 +176,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 7. PROFİL GÜNCELLEME
+    // PROFIL GÜNCELLEME
     socket.on('update profile', (data) => {
         if (!currentUsername) return;
         const db = readData();
@@ -181,15 +195,15 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 8. SİSTEMDEN ÇIKIŞ YAPMA (LOGOUT)
+    // SİSTEMDEN ÇIKIŞ YAPMA (LOGOUT)
     socket.on('logout user', () => {
         if (currentUsername) {
-            delete activeUsers[currentUsername]; // Aktif listeden siber kimliği sil
-            io.emit('user list', Object.values(activeUsers)); // Diğer kullanıcılara listeyi güncelle
+            delete activeUsers[currentUsername];
+            io.emit('user list', Object.values(activeUsers));
             
-            socket.leave(currentRoom); // Odadan güvenli çıkış yap
-            currentUsername = ""; // Hafızayı temizle
-            socket.emit('logout success'); // Arayüze başarılı sinyali gönder
+            socket.leave(currentRoom);
+            currentUsername = "";
+            socket.emit('logout success');
         }
     });
 
