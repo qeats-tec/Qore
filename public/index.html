@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qore // Cryptographic Network</title>
+    <title>QoreChat</title>
     <link rel="stylesheet" href="/style.css">
     
     <link rel="manifest" href="/manifest.json">
@@ -15,8 +15,8 @@
     <div id="setup-container" class="auth-wrapper">
         <div class="auth-box">
             <div class="auth-header">
-                <div class="glitch-logo">QORE // NETWORK</div>
-                <p id="auth-subtitle">Sisteme erişim sağlamak için kimlik doğrulaması yapın.</p>
+                <div class="glitch-logo">QoreChat</div>
+                <p id="auth-subtitle">QoreChat'e hoşgeldiniz!</p>
             </div>
             
             <div class="auth-tabs">
@@ -26,26 +26,26 @@
 
             <div id="login-form-area" class="auth-form">
                 <div class="input-group">
-                    <label>SİBER KİMLİK (USER)</label>
+                    <label>KULLANCI ADINIZ</label>
                     <input type="text" id="login-username" placeholder="Kullanıcı adınızı girin..." autocomplete="off">
                 </div>
                 <div class="input-group">
-                    <label>ERİŞİM ANAHTARI (PASS)</label>
+                    <label>ŞİFRENİZ</label>
                     <input type="password" id="login-password" placeholder="••••••••">
                 </div>
-                <button id="login-submit-btn" class="cyber-btn">SİSTEME SIZ</button>
+                <button id="login-submit-btn" class="cyber-btn">GİRİŞ YAP</button>
             </div>
 
             <div id="register-form-area" class="auth-form hidden">
                 <div class="input-group">
-                    <label>YENİ KİMLİK TANIMI</label>
+                    <label>İLK KULLANICI ADINIZI BELİRLEYİN</label>
                     <input type="text" id="register-username" placeholder="Benzersiz bir ad seçin..." autocomplete="off">
                 </div>
                 <div class="input-group">
-                    <label>GÜVENLİK ŞİFRESİ</label>
+                    <label>UNUTMAYACAĞINIZ BİR ŞİFRE YAZIN</label>
                     <input type="password" id="register-password" placeholder="Güçlü bir şifre girin...">
                 </div>
-                <button id="register-submit-btn" class="cyber-btn register">VERİTABANINA İŞLE</button>
+                <button id="register-submit-btn" class="cyber-btn register">KAYDOL</button>
             </div>
         </div>
     </div>
@@ -65,8 +65,8 @@
                 <ul id="user-list" class="cyber-list users"></ul>
             </div>
             <div class="side-panel-actions" style="display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 0 10px; margin-top: auto; margin-bottom: 15px;">
-                <button id="open-settings-btn" class="profile-settings-trigger" style="margin: 0; width: 100%;">⚙️ PROFİLİMİ DÜZENLE</button>
-                <button id="logout-btn" class="profile-settings-trigger" style="margin: 0; width: 100%; border-color: #ff3333; color: #ff3333; background: rgba(255,51,51,0.05);">❌ OTURUMU KAPAT</button>
+                <button id="open-settings-btn" class="profile-settings-trigger" style="margin: 0; width: 100%;">PROFİLİMİ DÜZENLE</button>
+                <button id="logout-btn" class="profile-settings-trigger" style="margin: 0; width: 100%; border-color: #ff3333; color: #ff3333; background: rgba(255,51,51,0.05);">OTURUMU KAPAT</button>
             </div>
         </aside>
 
@@ -107,7 +107,7 @@
             </div>
             
             <div class="input-group">
-                <label>SİBER TEMA RENGİ (NEON COLOR)</label>
+                <label>EMA RENGİ (NEON COLOR)</label>
                 <div class="color-picker-wrapper">
                     <input type="color" id="settings-theme-color" value="#00ff66">
                     <span id="color-hex-text">#00ff66</span>
@@ -129,7 +129,7 @@
                 <span id="view-user-status" class="status-tag">Online</span>
             </div>
             <div class="profile-view-body">
-                <label>// SİBER BİYOGRAFİ</label>
+                <label>BİYOGRAFİ:</label>
                 <p id="view-user-bio">Yükleniyor...</p>
             </div>
             <button id="close-user-modal-btn" class="cyber-btn text-btn">PANELİ KAPAT</button>
